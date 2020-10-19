@@ -60,3 +60,7 @@ variable "egress_from_port" {
 
 variable "egress_to_port" {
 }
+
+variable "http_ports" {
+  type = list(number)
+}

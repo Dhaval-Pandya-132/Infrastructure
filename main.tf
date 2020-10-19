@@ -84,13 +84,6 @@ resource "aws_security_group" "allow_all" {
   name   = var.securityname
   vpc_id = aws_vpc.vpc1.id
 
-  ingress {
-    description = var.securityname
-    from_port   = var.ingress_from_port
-    to_port     = var.ingress_to_port
-    protocol    = var.publicprotocol
-    cidr_blocks = [var.publicroute]
-  }
 
   egress {
     from_port   = var.egress_from_port
@@ -104,3 +97,30 @@ resource "aws_security_group" "allow_all" {
   }
 }
 
+resource "aws_security_group_rule" "ingress_http" {
+  count = "${length(var.http_ports)}"
+
+  type        = "ingress"
+  protocol    = "tcp"
+  cidr_blocks = [var.publicroute]
+  from_port   = "${element(var.http_ports, count.index)}"
+  to_port     = "${element(var.http_ports, count.index)}"
+
+  security_group_id = "${aws_security_group.allow_all.id}"
+}
+
+
+
+
+# resource "aws_db_instance" "mysqlinstance" {
+#   allocated_storage    = 20
+#   storage_type         = "gp2"
+#   engine               = "mysql"
+#   engine_version       = "5.7"
+#   instance_class       = "db.t2.micro"
+#   name                 = "mydb"
+#   username             = "foo"
+#   password             = "foobarbaz"
+#   parameter_group_name = "default.mysql5.7"
+#   publicly_accessible  = false
+# }
