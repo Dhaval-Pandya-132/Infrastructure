@@ -47,7 +47,10 @@ variable "subnet_map_public" {
 variable "publicprotocol" {
 }
 
-variable "securityname" {
+variable "application_security_group_name" {
+}
+
+variable "database_security_group_name" {
 }
 
 variable "ingress_from_port" {
@@ -63,4 +66,10 @@ variable "egress_to_port" {
 
 variable "http_ports" {
   type = list(number)
+}
+
+variable "protocol" {
+}
+
+variable "mysql_protocol" {
 }

@@ -81,9 +81,8 @@ resource "aws_route_table_association" "associate_subnet3" {
 }
 
 resource "aws_security_group" "allow_all" {
-  name   = var.securityname
+  name   = var.application_security_group_name
   vpc_id = aws_vpc.vpc1.id
-
 
   egress {
     from_port   = var.egress_from_port
@@ -93,20 +92,42 @@ resource "aws_security_group" "allow_all" {
   }
 
   tags = {
-    Name = var.securityname
+    Name = var.application_security_group_name
   }
 }
+
 
 resource "aws_security_group_rule" "ingress_http" {
   count = "${length(var.http_ports)}"
 
   type        = "ingress"
-  protocol    = "tcp"
+  protocol    = var.protocol
   cidr_blocks = [var.publicroute]
   from_port   = "${element(var.http_ports, count.index)}"
   to_port     = "${element(var.http_ports, count.index)}"
 
   security_group_id = "${aws_security_group.allow_all.id}"
+}
+resource "aws_security_group" "database" {
+  name   = var.database_security_group_name
+  vpc_id = aws_vpc.vpc1.id
+
+  ingress {
+    from_port       = var.mysql_protocol
+    to_port         = var.mysql_protocol
+    protocol        = var.protocol
+    security_groups = ["${aws_security_group.allow_all.id}"]
+  }
+  egress {
+    from_port   = var.egress_from_port
+    to_port     = var.egress_to_port
+    protocol    = var.publicprotocol
+    cidr_blocks = [var.publicroute]
+  }
+
+  tags = {
+    Name = var.database_security_group_name
+  }
 }
 
 
