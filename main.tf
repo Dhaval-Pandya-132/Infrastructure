@@ -130,7 +130,30 @@ resource "aws_security_group" "database" {
   }
 }
 
+resource "aws_s3_bucket" "s3bucket" {
+  bucket        = var.bucket_name
+  acl           = var.bucket_acl
+  force_destroy = true
+  lifecycle_rule {
+    id      = var.lifecycle_id
+    enabled = var.lifecycle_enabled
 
+    transition {
+      days          = var.transition_days
+      storage_class = var.transition_class
+    }
+  }
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = var.sse_algorithm
+      }
+    }
+  }
+  tags = {
+    Name = var.bucket_name
+  }
+}
 
 
 # resource "aws_db_instance" "mysqlinstance" {

@@ -73,3 +73,27 @@ variable "protocol" {
 
 variable "mysql_protocol" {
 }
+
+
+## variable for S3 bucket
+
+variable "transition_days" {
+}
+
+variable "transition_class" {
+}
+variable "lifecycle_id" {
+}
+
+variable "lifecycle_enabled" {
+}
+
+variable "sse_algorithm" {
+}
+
+variable "bucket_name" {
+}
+
+variable "bucket_acl" {
+}
+
