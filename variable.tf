@@ -47,7 +47,10 @@ variable "subnet_map_public" {
 variable "publicprotocol" {
 }
 
-variable "securityname" {
+variable "application_security_group_name" {
+}
+
+variable "database_security_group_name" {
 }
 
 variable "ingress_from_port" {
@@ -60,3 +63,112 @@ variable "egress_from_port" {
 
 variable "egress_to_port" {
 }
+
+variable "http_ports" {
+  type = list(number)
+}
+
+variable "protocol" {
+}
+
+variable "mysql_protocol" {
+}
+
+
+## variable for S3 bucket
+
+variable "transition_days" {
+}
+
+variable "transition_class" {
+}
+variable "lifecycle_id" {
+}
+
+variable "lifecycle_enabled" {
+}
+
+variable "sse_algorithm" {
+}
+
+variable "bucket_name" {
+}
+
+variable "bucket_acl" {
+}
+
+variable "dbusername" {
+}
+
+variable "dbpassword" {
+}
+
+variable "instanceAmi" {
+}
+
+
+variable "instanceKey" {
+}
+
+variable "instanceType" {
+}
+
+variable "associatepublicip" {
+}
+
+variable "instance_volume_type" {
+}
+
+variable "instance_volume_size" {
+}
+
+variable "instance_role" {
+}
+
+
+variable "db_allocated_storage" {
+}
+
+variable "db_storage_type" {
+}
+
+variable "db_engine" {
+}
+
+variable "db_engine_version" {
+}
+
+variable "db_instance_class" {
+}
+
+variable "db_name" {
+}
+
+variable "db_username" {
+}
+variable "db_password" {
+}
+
+variable "db_parameter_group_name" {
+}
+
+variable "db_skip_final_snapshot" {
+}
+
+variable "db_publicly_accessible" {
+}
+
+
+variable "aws_db_subnet_group_name" {
+}
+
+
+variable "connectionstring1" {
+}
+# variable "connectionstring2" {
+# }
+
+
+
+
+
