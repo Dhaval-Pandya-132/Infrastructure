@@ -97,3 +97,78 @@ variable "bucket_name" {
 variable "bucket_acl" {
 }
 
+variable "dbusername" {
+}
+
+variable "dbpassword" {
+}
+
+variable "instanceAmi" {
+}
+
+
+variable "instanceKey" {
+}
+
+variable "instanceType" {
+}
+
+variable "associatepublicip" {
+}
+
+variable "instance_volume_type" {
+}
+
+variable "instance_volume_size" {
+}
+
+variable "instance_role" {
+}
+
+
+variable "db_allocated_storage" {
+}
+
+variable "db_storage_type" {
+}
+
+variable "db_engine" {
+}
+
+variable "db_engine_version" {
+}
+
+variable "db_instance_class" {
+}
+
+variable "db_name" {
+}
+
+variable "db_username" {
+}
+variable "db_password" {
+}
+
+variable "db_parameter_group_name" {
+}
+
+variable "db_skip_final_snapshot" {
+}
+
+variable "db_publicly_accessible" {
+}
+
+
+variable "aws_db_subnet_group_name" {
+}
+
+
+variable "connectionstring1" {
+}
+# variable "connectionstring2" {
+# }
+
+
+
+
+

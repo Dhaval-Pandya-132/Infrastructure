@@ -130,6 +130,34 @@ resource "aws_security_group" "database" {
   }
 }
 
+resource "aws_db_subnet_group" "default" {
+  name       = var.aws_db_subnet_group_name
+  subnet_ids = [aws_subnet.subnet1.id, aws_subnet.subnet2.id, aws_subnet.subnet3.id]
+
+  tags = {
+    Name = var.aws_db_subnet_group_name
+  }
+}
+
+resource "aws_db_instance" "mysqlinstance" {
+  allocated_storage      = var.db_allocated_storage
+  storage_type           = var.db_storage_type
+  engine                 = var.db_engine
+  engine_version         = var.db_engine_version
+  instance_class         = var.db_instance_class
+  name                   = var.db_name
+  username               = var.db_username
+  password               = var.db_password
+  parameter_group_name   = var.db_parameter_group_name
+  skip_final_snapshot    = var.db_skip_final_snapshot
+  publicly_accessible    = var.db_publicly_accessible
+  vpc_security_group_ids = [aws_security_group.database.id]
+  db_subnet_group_name   = aws_db_subnet_group.default.name
+}
+
+
+
+
 resource "aws_s3_bucket" "s3bucket" {
   bucket        = var.bucket_name
   acl           = var.bucket_acl
@@ -155,16 +183,56 @@ resource "aws_s3_bucket" "s3bucket" {
   }
 }
 
+resource "aws_iam_role" "iamrole" {
+  name               = var.instance_role
+  assume_role_policy = "${file("${path.module}/assume_policy.json")}"
 
-# resource "aws_db_instance" "mysqlinstance" {
-#   allocated_storage    = 20
-#   storage_type         = "gp2"
-#   engine               = "mysql"
-#   engine_version       = "5.7"
-#   instance_class       = "db.t2.micro"
-#   name                 = "mydb"
-#   username             = "foo"
-#   password             = "foobarbaz"
-#   parameter_group_name = "default.mysql5.7"
-#   publicly_accessible  = false
-# }
+}
+
+resource "aws_iam_instance_profile" "instance_profile" {
+  name = var.instance_role
+  role = "${aws_iam_role.iamrole.name}"
+}
+
+
+data "template_file" "policytemplate" {
+  vars = {
+    bucket_name = var.bucket_name
+  }
+  template = "${file("${path.module}/policy.json")}"
+}
+
+resource "aws_iam_role_policy" "s3policy" {
+  name   = "WebAppS3"
+  role   = "${aws_iam_role.iamrole.id}"
+  policy = "${data.template_file.policytemplate.rendered}"
+}
+
+
+data "template_file" "userdata" {
+  vars = {
+    dbhostname           = aws_db_instance.mysqlinstance.endpoint,
+    dbpassword           = var.dbpassword,
+    dbusername           = var.dbusername,
+    awsregion            = var.region_name,
+    bucketname           = var.bucket_name,
+    connectionStringName = format("$%s", "{CONNECTIONSTRING}")
+  }
+  template = "${file("${path.module}/myuserdata.sh")}"
+}
+
+resource "aws_instance" "ec2instance" {
+  ami                         = var.instanceAmi
+  instance_type               = var.instanceType
+  key_name                    = var.instanceKey
+  vpc_security_group_ids      = [aws_security_group.allow_all.id]
+  subnet_id                   = aws_subnet.subnet1.id
+  associate_public_ip_address = var.associatepublicip
+  iam_instance_profile        = aws_iam_instance_profile.instance_profile.name
+  user_data                   = "${data.template_file.userdata.rendered}"
+
+  root_block_device {
+    volume_type = var.instance_volume_type
+    volume_size = var.instance_volume_size
+  }
+}
