@@ -323,3 +323,15 @@ resource "aws_route53_record" "api" {
   ttl     = var.ttl
   records = [aws_instance.ec2instance.public_ip]
 }
+
+
+resource "aws_dynamodb_table" "csye6225" {
+  name           = var.dynamodb_table_name
+  hash_key       = var.dynamodb_column_name
+  write_capacity = var.write_capacity
+  read_capacity  = var.read_capacity
+  attribute {
+    name = var.dynamodb_column_name
+    type = var.dynamodb_column_type
+  }
+}
