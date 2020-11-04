@@ -156,8 +156,6 @@ resource "aws_db_instance" "mysqlinstance" {
 }
 
 
-
-
 resource "aws_s3_bucket" "s3bucket" {
   bucket        = var.bucket_name
   acl           = var.bucket_acl
@@ -186,7 +184,6 @@ resource "aws_s3_bucket" "s3bucket" {
 resource "aws_iam_role" "iamrole" {
   name               = var.instance_role
   assume_role_policy = "${file("${path.module}/assume_policy.json")}"
-
 }
 
 resource "aws_iam_instance_profile" "instance_profile" {
@@ -209,6 +206,79 @@ resource "aws_iam_role_policy" "s3policy" {
 }
 
 
+data "template_file" "CodeDeploy_EC2S3Policy_template" {
+  template = "${file("${path.module}/codeDeployEC2Policy.json")}"
+}
+
+resource "aws_iam_policy" "CodeDeploy_EC2S3Policy" {
+  name   = var.GH-Upload-To-S3
+  policy = "${data.template_file.CodeDeploy_EC2S3Policy_template.rendered}"
+}
+
+resource "aws_iam_role_policy_attachment" "test-attach" {
+  role       = aws_iam_role.iamrole.name
+  policy_arn = aws_iam_policy.CodeDeploy_EC2S3Policy.arn
+}
+
+data "template_file" "codeDeployService_template" {
+  template = "${file("${path.module}/codeDeployServicePolicy.json")}"
+}
+
+resource "aws_iam_role" "codedeploy_service" {
+  name               = var.codedeploy-service-role
+  assume_role_policy = "${data.template_file.codeDeployService_template.rendered}"
+}
+
+data "template_file" "CodeDeployService_S3Policy_template" {
+  vars = {
+    region_name        = var.region_name
+    accountid          = var.accountid
+    codedeploy_appname = var.codedeploy_appname
+  }
+
+  template = "${file("${path.module}/codeDeployS3Policy.json")}"
+}
+
+resource "aws_iam_policy" "CodeDeployService_S3Policy" {
+  name   = var.GH-Code-Deploy
+  policy = "${data.template_file.CodeDeployService_S3Policy_template.rendered}"
+}
+
+resource "aws_iam_role_policy_attachment" "attach-AWSCodeDeployRole-service-policy" {
+  role       = aws_iam_role.codedeploy_service.name
+  policy_arn = var.aws_codedeploye_arn
+}
+
+resource "aws_codedeploy_app" "codedeploymentApp" {
+  compute_platform = var.compute_platform
+  name             = var.codedeploy_appname
+}
+
+resource "aws_codedeploy_deployment_group" "deploymentGroup" {
+  app_name               = aws_codedeploy_app.codedeploymentApp.name
+  deployment_group_name  = var.codedeploy_groupname
+  service_role_arn       = aws_iam_role.codedeploy_service.arn
+  deployment_config_name = var.deployment_config_name
+  ec2_tag_set {
+    ec2_tag_filter {
+      key   = var.instance_tag_key
+      type  = var.instance_tag_type
+      value = var.instance_tag_value
+    }
+
+  }
+}
+
+resource "aws_iam_user_policy_attachment" "CodeDeployService_S3Policy_IAM" {
+  user       = var.cicd_username
+  policy_arn = aws_iam_policy.CodeDeployService_S3Policy.arn
+}
+resource "aws_iam_user_policy_attachment" "CodeDeploy_EC2S3Policy_IAM" {
+  user       = var.cicd_username
+  policy_arn = aws_iam_policy.CodeDeploy_EC2S3Policy.arn
+}
+
+
 data "template_file" "userdata" {
   vars = {
     dbhostname           = aws_db_instance.mysqlinstance.endpoint,
@@ -216,7 +286,7 @@ data "template_file" "userdata" {
     dbusername           = var.dbusername,
     awsregion            = var.region_name,
     bucketname           = var.bucket_name,
-    connectionStringName = format("$%s", "{CONNECTIONSTRING}")
+    connectionStringName = join("", var.connectionstring1) //format("$%s", "{CONNECTIONSTRING}")
   }
   template = "${file("${path.module}/myuserdata.sh")}"
 }
@@ -235,4 +305,21 @@ resource "aws_instance" "ec2instance" {
     volume_type = var.instance_volume_type
     volume_size = var.instance_volume_size
   }
+
+  tags = {
+    Name = var.instance_name
+  }
+}
+
+data "aws_route53_zone" "primaryZone" {
+  name         = var.route53_zone_name
+  private_zone = false
+}
+
+resource "aws_route53_record" "api" {
+  zone_id = data.aws_route53_zone.primaryZone.zone_id
+  name    = "api.${data.aws_route53_zone.primaryZone.name}"
+  type    = var.route53_zone_record_type
+  ttl     = var.ttl
+  records = [aws_instance.ec2instance.public_ip]
 }
