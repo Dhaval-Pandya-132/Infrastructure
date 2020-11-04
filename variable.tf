@@ -215,3 +215,19 @@ variable "accountid" {
 }
 variable "deployment_config_name" {
 }
+
+variable "dynamodb_table_name" {
+}
+
+variable "dynamodb_column_name" {
+}
+
+variable "dynamodb_column_type" {
+}
+
+variable "write_capacity" {
+}
+
+variable "read_capacity" {
+}
+
