@@ -168,7 +168,50 @@ variable "connectionstring1" {
 # variable "connectionstring2" {
 # }
 
+variable "GH-Upload-To-S3" {
+}
+
+variable "codedeploy-service-role" {
+}
+
+variable "GH-Code-Deploy" {
+}
+
+variable "aws_codedeploye_arn" {
+}
+
+variable "compute_platform" {
+}
+variable "codedeploy_appname" {
+}
+variable "codedeploy_groupname" {
+}
+
+variable "cicd_username" {
+}
 
 
+variable "instance_tag_key" {
+}
+
+variable "instance_tag_type" {
+}
+
+variable "instance_tag_value" {
+}
+variable "instance_name" {
+}
+
+variable "route53_zone_name" {
+}
+
+variable "route53_zone_record_type" {
+}
+variable "ttl" {
+}
 
 
+variable "accountid" {
+}
+variable "deployment_config_name" {
+}
