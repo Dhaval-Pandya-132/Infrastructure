@@ -286,7 +286,7 @@ data "template_file" "userdata" {
     dbusername           = var.dbusername,
     awsregion            = var.region_name,
     bucketname           = var.bucket_name,
-    connectionStringName = format("$%s", "{CONNECTIONSTRING}")
+    connectionStringName = join("", var.connectionstring1) //format("$%s", "{CONNECTIONSTRING}")
   }
   template = "${file("${path.module}/myuserdata.sh")}"
 }
