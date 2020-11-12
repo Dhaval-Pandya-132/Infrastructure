@@ -215,9 +215,15 @@ resource "aws_iam_policy" "CodeDeploy_EC2S3Policy" {
   policy = "${data.template_file.CodeDeploy_EC2S3Policy_template.rendered}"
 }
 
-resource "aws_iam_role_policy_attachment" "test-attach" {
+resource "aws_iam_role_policy_attachment" "attach-codedeploy-policy" {
   role       = aws_iam_role.iamrole.name
   policy_arn = aws_iam_policy.CodeDeploy_EC2S3Policy.arn
+}
+
+
+resource "aws_iam_role_policy_attachment" "attach-cloudwatch-policy" {
+  role       = aws_iam_role.iamrole.name
+  policy_arn = var.cloudwatch_role_arn
 }
 
 data "template_file" "codeDeployService_template" {
@@ -286,6 +292,9 @@ data "template_file" "userdata" {
     dbusername           = var.dbusername,
     awsregion            = var.region_name,
     bucketname           = var.bucket_name,
+    loggingPath          = var.loggingPath,
+    loggingFile          = var.loggingFile,
+    loggingLevel         = var.loggingLevel,
     connectionStringName = join("", var.connectionstring1) //format("$%s", "{CONNECTIONSTRING}")
   }
   template = "${file("${path.module}/myuserdata.sh")}"

@@ -7,7 +7,7 @@ echo "export PASSWORD=${dbpassword}" >> setenv.sh
 echo "export DBUSERNAME=${dbusername}" >> setenv.sh 
 echo "export region='${awsregion}'" >> setenv.sh
 echo "export bucketName='${bucketname}'" >> setenv.sh 
-echo "export JAVA_OPTS=\"\$JAVA_OPTS -Dspring.datasource.url='${connectionStringName}' -Djava.io.tmpdir='/opt/tomcat/temp' -Dspring.servlet.multipart.location='/opt/tomcat/temp' -Dspring.datasource.username=${dbusername} -Dspring.datasource.password=${dbpassword}\"" >> setenv.sh
+echo "export JAVA_OPTS=\"\$JAVA_OPTS -Dspring.datasource.url='${connectionStringName}' -Dlogging.file.path='${loggingPath}' -Dlogging.file.name='${loggingFile}' -Dlogging.level.root='${loggingLevel}' -Djava.io.tmpdir='/opt/tomcat/temp' -Dspring.servlet.multipart.location='/opt/tomcat/temp' -Dspring.datasource.username=${dbusername} -Dspring.datasource.password=${dbpassword}\"" >> setenv.sh
 
 
 
