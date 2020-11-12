@@ -231,3 +231,14 @@ variable "write_capacity" {
 variable "read_capacity" {
 }
 
+variable "cloudwatch_role_arn" {
+
+}
+
+variable "loggingPath" {
+
+}
+
+variable "loggingFile" {}
+variable "loggingLevel" {}
+
