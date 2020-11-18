@@ -241,4 +241,7 @@ variable "loggingPath" {
 
 variable "loggingFile" {}
 variable "loggingLevel" {}
+variable "codedeploy_bucket_name" {
+
+}
 

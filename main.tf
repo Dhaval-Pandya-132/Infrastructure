@@ -80,9 +80,38 @@ resource "aws_route_table_association" "associate_subnet3" {
   route_table_id = aws_route_table.routetable.id
 }
 
+resource "aws_security_group" "sg_loadBalancer" {
+  name   = "sg_loadBalancer"
+  vpc_id = aws_vpc.vpc1.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = var.protocol
+    cidr_blocks = [var.publicroute]
+  }
+  egress {
+    from_port   = var.egress_from_port
+    to_port     = var.egress_to_port
+    protocol    = var.publicprotocol
+    cidr_blocks = [var.publicroute]
+  }
+  tags = {
+    Name = "lb_securitygroup"
+  }
+}
+
 resource "aws_security_group" "allow_all" {
   name   = var.application_security_group_name
   vpc_id = aws_vpc.vpc1.id
+
+  ingress {
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = var.protocol
+    security_groups = [aws_security_group.sg_loadBalancer.id]
+
+  }
 
   egress {
     from_port   = var.egress_from_port
@@ -100,11 +129,11 @@ resource "aws_security_group" "allow_all" {
 resource "aws_security_group_rule" "ingress_http" {
   count = "${length(var.http_ports)}"
 
-  type        = "ingress"
-  protocol    = var.protocol
-  cidr_blocks = [var.publicroute]
-  from_port   = "${element(var.http_ports, count.index)}"
-  to_port     = "${element(var.http_ports, count.index)}"
+  type                     = "ingress"
+  protocol                 = var.protocol
+  source_security_group_id = aws_security_group.sg_loadBalancer.id
+  from_port                = "${element(var.http_ports, count.index)}"
+  to_port                  = "${element(var.http_ports, count.index)}"
 
   security_group_id = "${aws_security_group.allow_all.id}"
 }
@@ -207,6 +236,11 @@ resource "aws_iam_role_policy" "s3policy" {
 
 
 data "template_file" "CodeDeploy_EC2S3Policy_template" {
+
+  vars = {
+    codedeploy_bucket_name = var.codedeploy_bucket_name
+  }
+
   template = "${file("${path.module}/codeDeployEC2Policy.json")}"
 }
 
@@ -265,6 +299,23 @@ resource "aws_codedeploy_deployment_group" "deploymentGroup" {
   deployment_group_name  = var.codedeploy_groupname
   service_role_arn       = aws_iam_role.codedeploy_service.arn
   deployment_config_name = var.deployment_config_name
+  autoscaling_groups     = [aws_autoscaling_group.autoscalingGroup.name]
+
+  deployment_style {
+    deployment_type = "IN_PLACE"
+  }
+
+  # load_balancer_info {
+  #   elb_info          = aws_lb.applicationLoadBalancer.name
+  #   target_group_info = aws_lb_target_group.application_target_group.name
+  # }
+  load_balancer_info {
+    target_group_info {
+      name = aws_lb_target_group.application_target_group.name
+    }
+
+  }
+
   ec2_tag_set {
     ec2_tag_filter {
       key   = var.instance_tag_key
@@ -299,7 +350,7 @@ data "template_file" "userdata" {
   }
   template = "${file("${path.module}/myuserdata.sh")}"
 }
-
+/**
 resource "aws_instance" "ec2instance" {
   ami                         = var.instanceAmi
   instance_type               = var.instanceType
@@ -319,18 +370,10 @@ resource "aws_instance" "ec2instance" {
     Name = var.instance_name
   }
 }
-
+**/
 data "aws_route53_zone" "primaryZone" {
   name         = var.route53_zone_name
   private_zone = false
-}
-
-resource "aws_route53_record" "api" {
-  zone_id = data.aws_route53_zone.primaryZone.zone_id
-  name    = "api.${data.aws_route53_zone.primaryZone.name}"
-  type    = var.route53_zone_record_type
-  ttl     = var.ttl
-  records = [aws_instance.ec2instance.public_ip]
 }
 
 
@@ -343,4 +386,149 @@ resource "aws_dynamodb_table" "csye6225" {
     name = var.dynamodb_column_name
     type = var.dynamodb_column_type
   }
+}
+
+
+
+resource "aws_lb_target_group" "application_target_group" {
+  name        = "appliactionTargetGroup"
+  port        = 8080
+  protocol    = "HTTP"
+  target_type = "instance"
+  vpc_id      = aws_vpc.vpc1.id
+}
+
+
+resource "aws_lb" "applicationLoadBalancer" {
+  name               = "applicationLoadBalancer"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.sg_loadBalancer.id]
+  subnets = [aws_subnet.subnet1.id,
+    aws_subnet.subnet2.id,
+  aws_subnet.subnet3.id]
+  enable_deletion_protection = false
+
+  tags = {
+    Name = "applicationLoadBalancer"
+  }
+}
+resource "aws_lb_listener" "lb_listener" {
+  load_balancer_arn = aws_lb.applicationLoadBalancer.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.application_target_group.arn
+  }
+}
+
+resource "aws_launch_configuration" "as_conf" {
+  name_prefix                 = "asg_launch_config"
+  image_id                    = var.instanceAmi
+  instance_type               = var.instanceType
+  key_name                    = var.instanceKey
+  security_groups             = [aws_security_group.allow_all.id]
+  associate_public_ip_address = var.associatepublicip
+  iam_instance_profile        = aws_iam_instance_profile.instance_profile.name
+  user_data                   = "${data.template_file.userdata.rendered}"
+
+  root_block_device {
+    volume_type = var.instance_volume_type
+    volume_size = var.instance_volume_size
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+
+resource "aws_autoscaling_group" "autoscalingGroup" {
+  name                 = "autoscalingGroup"
+  max_size             = 2
+  min_size             = 1
+  desired_capacity     = 1
+  launch_configuration = aws_launch_configuration.as_conf.name
+  vpc_zone_identifier = [aws_subnet.subnet1.id
+    , aws_subnet.subnet2.id
+    , aws_subnet.subnet3.id
+  ]
+
+  target_group_arns = [aws_lb_target_group.application_target_group.arn]
+
+  tags = [{
+    "key"                 = "Name"
+    "value"               = "MyEC2Instance"
+    "propagate_at_launch" = true
+  }]
+}
+
+
+resource "aws_route53_record" "api" {
+  zone_id = data.aws_route53_zone.primaryZone.zone_id
+  name    = "${data.aws_route53_zone.primaryZone.name}"
+  type    = var.route53_zone_record_type
+
+  alias {
+    name                   = aws_lb.applicationLoadBalancer.dns_name
+    zone_id                = aws_lb.applicationLoadBalancer.zone_id
+    evaluate_target_health = false
+  }
+
+}
+
+resource "aws_cloudwatch_metric_alarm" "CPUAlarmHigh" {
+  alarm_name          = "CPUAlarmHigh"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "5"
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.autoscalingGroup.name
+  }
+  alarm_description = "This metric monitors ec2 cpu utilization"
+  alarm_actions     = [aws_autoscaling_policy.WebServerScaleUpPolicy.arn]
+}
+
+
+resource "aws_autoscaling_policy" "WebServerScaleUpPolicy" {
+  policy_type            = "SimpleScaling"
+  name                   = "WebServerScaleUpPolicy"
+  scaling_adjustment     = 1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = 60
+  autoscaling_group_name = aws_autoscaling_group.autoscalingGroup.name
+}
+
+resource "aws_autoscaling_policy" "WebServerScaleDownPolicy" {
+  policy_type            = "SimpleScaling"
+  name                   = "WebServerScaleDownPolicy"
+  scaling_adjustment     = -1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = 60
+  autoscaling_group_name = aws_autoscaling_group.autoscalingGroup.name
+}
+
+
+resource "aws_cloudwatch_metric_alarm" "CPUAlarmLow" {
+  alarm_name          = "CPUAlarmLow"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "3"
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.autoscalingGroup.name
+  }
+  alarm_description = "This metric monitors ec2 cpu utilization"
+  alarm_actions     = [aws_autoscaling_policy.WebServerScaleDownPolicy.arn]
 }
