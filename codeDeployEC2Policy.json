@@ -20,8 +20,8 @@
                 "s3:GetObjectVersion"
             ],
             "Resource": [
-                "arn:aws:s3:::codedeploy.dhavalpandya.me/*",
-                "arn:aws:s3:::codedeploy.dhavalpandya.me"
+                "arn:aws:s3:::${codedeploy_bucket_name}/*",
+                "arn:aws:s3:::${codedeploy_bucket_name}"
             ]
         }
     ]
