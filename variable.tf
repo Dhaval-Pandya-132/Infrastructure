@@ -245,3 +245,61 @@ variable "codedeploy_bucket_name" {
 
 }
 
+variable "targetGroupName" {}
+variable "targetGroupPort" {}
+variable "targetGroupProtocol" {}
+variable "targetGroupType" {}
+
+
+variable "loadBalancerName" {}
+variable "loadBalancerInternal" {}
+variable "loadBalancerType" {}
+
+variable "listenerPort" {}
+variable "listenerProtocol" {}
+variable "listenerDefaultActionType" {}
+
+variable "launchConfigurationName" {}
+
+variable "autoScalingGroupName" {}
+variable "autoScalingGroupMaxSize" {}
+variable "autoScalingGroupMinSize" {}
+variable "autoScalingGroupDesiredCapacity" {}
+variable "autoScalingGroupPropogateOnLaunch" {}
+
+variable "alarmHighName" {}
+variable "alarmHighComparisonOperator" {}
+variable "alarmHighEvalPeriod" {}
+variable "alarmHighMetricName" {}
+variable "alarmHighNamespace" {}
+variable "alarmHighPeriod" {}
+variable "alarmHighStatistic" {}
+variable "alarmHighThreshold" {}
+
+variable "alarmLowName" {}
+variable "alarmLowComparisonOperator" {}
+variable "alarmLowEvalPeriod" {}
+variable "alarmLowMetricName" {}
+variable "alarmLowNamespace" {}
+variable "alarmLowPeriod" {}
+variable "alarmLowStatistic" {}
+variable "alarmLowThreshold" {}
+
+variable "apachePort" {}
+variable "httpPort" {}
+variable "loadBalanceSecurityGroupName" {}
+
+
+
+variable "scalUpPolicyType" {}
+variable "scalUpPolicyName" {}
+variable "scalUpPolicyScalingAdjustment" {}
+variable "scalUpPolicyScalingAdjustmentType" {}
+variable "scalUpPolicyCooldown" {}
+
+
+variable "scalDownPolicyType" {}
+variable "scalDownPolicyName" {}
+variable "scalDownPolicyScalingAdjustment" {}
+variable "scalDownPolicyScalingAdjustmentType" {}
+variable "scalDownPolicyCooldown" {}

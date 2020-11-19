@@ -81,12 +81,12 @@ resource "aws_route_table_association" "associate_subnet3" {
 }
 
 resource "aws_security_group" "sg_loadBalancer" {
-  name   = "sg_loadBalancer"
+  name   = var.loadBalanceSecurityGroupName //"sg_loadBalancer"
   vpc_id = aws_vpc.vpc1.id
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = var.httpPort // 80
+    to_port     = var.httpPort //80
     protocol    = var.protocol
     cidr_blocks = [var.publicroute]
   }
@@ -97,7 +97,7 @@ resource "aws_security_group" "sg_loadBalancer" {
     cidr_blocks = [var.publicroute]
   }
   tags = {
-    Name = "lb_securitygroup"
+    Name = var.loadBalanceSecurityGroupName //"lb_securitygroup"
   }
 }
 
@@ -106,8 +106,8 @@ resource "aws_security_group" "allow_all" {
   vpc_id = aws_vpc.vpc1.id
 
   ingress {
-    from_port       = 8080
-    to_port         = 8080
+    from_port       = var.apachePort //8080
+    to_port         = var.apachePort //8080
     protocol        = var.protocol
     security_groups = [aws_security_group.sg_loadBalancer.id]
 
@@ -391,18 +391,18 @@ resource "aws_dynamodb_table" "csye6225" {
 
 
 resource "aws_lb_target_group" "application_target_group" {
-  name        = "appliactionTargetGroup"
-  port        = 8080
-  protocol    = "HTTP"
-  target_type = "instance"
+  name        = var.targetGroupName     //"appliactionTargetGroup"
+  port        = var.targetGroupPort     //8080
+  protocol    = var.targetGroupProtocol //"HTTP"
+  target_type = var.targetGroupType     //"instance"
   vpc_id      = aws_vpc.vpc1.id
 }
 
 
 resource "aws_lb" "applicationLoadBalancer" {
-  name               = "applicationLoadBalancer"
-  internal           = false
-  load_balancer_type = "application"
+  name               = var.loadBalancerName     //"applicationLoadBalancer"
+  internal           = var.loadBalancerInternal //false
+  load_balancer_type = var.loadBalancerType     //"application"
   security_groups    = [aws_security_group.sg_loadBalancer.id]
   subnets = [aws_subnet.subnet1.id,
     aws_subnet.subnet2.id,
@@ -410,22 +410,22 @@ resource "aws_lb" "applicationLoadBalancer" {
   enable_deletion_protection = false
 
   tags = {
-    Name = "applicationLoadBalancer"
+    Name = var.loadBalancerName //"applicationLoadBalancer"
   }
 }
 resource "aws_lb_listener" "lb_listener" {
   load_balancer_arn = aws_lb.applicationLoadBalancer.arn
-  port              = "80"
-  protocol          = "HTTP"
+  port              = var.listenerPort     // "80"
+  protocol          = var.listenerProtocol // "HTTP"
 
   default_action {
-    type             = "forward"
+    type             = var.listenerDefaultActionType //"forward"
     target_group_arn = aws_lb_target_group.application_target_group.arn
   }
 }
 
 resource "aws_launch_configuration" "as_conf" {
-  name_prefix                 = "asg_launch_config"
+  name_prefix                 = var.launchConfigurationName //"asg_launch_config"
   image_id                    = var.instanceAmi
   instance_type               = var.instanceType
   key_name                    = var.instanceKey
@@ -446,10 +446,10 @@ resource "aws_launch_configuration" "as_conf" {
 
 
 resource "aws_autoscaling_group" "autoscalingGroup" {
-  name                 = "autoscalingGroup"
-  max_size             = 2
-  min_size             = 1
-  desired_capacity     = 1
+  name                 = var.autoScalingGroupName            //"autoscalingGroup"
+  max_size             = var.autoScalingGroupMaxSize         //2
+  min_size             = var.autoScalingGroupMinSize         //1
+  desired_capacity     = var.autoScalingGroupDesiredCapacity //1
   launch_configuration = aws_launch_configuration.as_conf.name
   vpc_zone_identifier = [aws_subnet.subnet1.id
     , aws_subnet.subnet2.id
@@ -460,8 +460,8 @@ resource "aws_autoscaling_group" "autoscalingGroup" {
 
   tags = [{
     "key"                 = "Name"
-    "value"               = "MyEC2Instance"
-    "propagate_at_launch" = true
+    "value"               = var.instance_name
+    "propagate_at_launch" = var.autoScalingGroupPropogateOnLaunch // true
   }]
 }
 
@@ -480,14 +480,14 @@ resource "aws_route53_record" "api" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "CPUAlarmHigh" {
-  alarm_name          = "CPUAlarmHigh"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = "5"
+  alarm_name          = var.alarmHighName               //"CPUAlarmHigh"
+  comparison_operator = var.alarmHighComparisonOperator //"GreaterThanThreshold"
+  evaluation_periods  = var.alarmHighEvalPeriod         //"1"
+  metric_name         = var.alarmHighMetricName         //"CPUUtilization"
+  namespace           = var.alarmHighNamespace          //"AWS/EC2"
+  period              = var.alarmHighPeriod             //"300"
+  statistic           = var.alarmHighStatistic          //"Average"
+  threshold           = var.alarmHighThreshold          //"5"
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.autoscalingGroup.name
@@ -498,33 +498,33 @@ resource "aws_cloudwatch_metric_alarm" "CPUAlarmHigh" {
 
 
 resource "aws_autoscaling_policy" "WebServerScaleUpPolicy" {
-  policy_type            = "SimpleScaling"
-  name                   = "WebServerScaleUpPolicy"
-  scaling_adjustment     = 1
-  adjustment_type        = "ChangeInCapacity"
-  cooldown               = 60
+  policy_type            = var.scalUpPolicyType                  //"SimpleScaling"
+  name                   = var.scalUpPolicyName                  //"WebServerScaleUpPolicy"
+  scaling_adjustment     = var.scalUpPolicyScalingAdjustment     //1
+  adjustment_type        = var.scalUpPolicyScalingAdjustmentType //"ChangeInCapacity"
+  cooldown               = var.scalUpPolicyCooldown              //60
   autoscaling_group_name = aws_autoscaling_group.autoscalingGroup.name
 }
 
 resource "aws_autoscaling_policy" "WebServerScaleDownPolicy" {
-  policy_type            = "SimpleScaling"
-  name                   = "WebServerScaleDownPolicy"
-  scaling_adjustment     = -1
-  adjustment_type        = "ChangeInCapacity"
-  cooldown               = 60
+  policy_type            = var.scalDownPolicyType                  //"SimpleScaling"
+  name                   = var.scalDownPolicyName                  //"WebServerScaleDownPolicy"
+  scaling_adjustment     = var.scalDownPolicyScalingAdjustment     //-1
+  adjustment_type        = var.scalDownPolicyScalingAdjustmentType //"ChangeInCapacity"
+  cooldown               = var.scalDownPolicyCooldown              //60
   autoscaling_group_name = aws_autoscaling_group.autoscalingGroup.name
 }
 
 
 resource "aws_cloudwatch_metric_alarm" "CPUAlarmLow" {
-  alarm_name          = "CPUAlarmLow"
-  comparison_operator = "LessThanThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = "3"
+  alarm_name          = var.alarmLowName               //"CPUAlarmLow"
+  comparison_operator = var.alarmLowComparisonOperator //"LessThanThreshold"
+  evaluation_periods  = var.alarmLowEvalPeriod         //"1"
+  metric_name         = var.alarmLowMetricName         //"CPUUtilization"
+  namespace           = var.alarmLowNamespace          //"AWS/EC2"
+  period              = var.alarmLowPeriod             //"300"
+  statistic           = var.alarmLowStatistic          //"Average"
+  threshold           = var.alarmLowThreshold          //"3"
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.autoscalingGroup.name
