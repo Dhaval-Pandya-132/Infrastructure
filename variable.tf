@@ -303,3 +303,16 @@ variable "scalDownPolicyName" {}
 variable "scalDownPolicyScalingAdjustment" {}
 variable "scalDownPolicyScalingAdjustmentType" {}
 variable "scalDownPolicyCooldown" {}
+
+variable "topicname" {}
+variable "lambdafunction" {
+}
+
+
+variable "memorysize" {}
+variable "timeout" {}
+variable "runtime" {}
+variable "handler" {}
+variable "lambda_cicd_user" {
+
+}
