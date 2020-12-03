@@ -346,6 +346,7 @@ data "template_file" "userdata" {
     loggingPath          = var.loggingPath,
     loggingFile          = var.loggingFile,
     loggingLevel         = var.loggingLevel,
+    topicarn             = aws_sns_topic.question_updates.arn
     connectionStringName = join("", var.connectionstring1) //format("$%s", "{CONNECTIONSTRING}")
   }
   template = "${file("${path.module}/myuserdata.sh")}"
@@ -531,4 +532,152 @@ resource "aws_cloudwatch_metric_alarm" "CPUAlarmLow" {
   }
   alarm_description = "This metric monitors ec2 cpu utilization"
   alarm_actions     = [aws_autoscaling_policy.WebServerScaleDownPolicy.arn]
+}
+
+
+resource "aws_sns_topic" "question_updates" {
+  name = "question-updates"
+}
+
+
+
+
+data "template_file" "snspolicytemplate" {
+  vars = {
+    region    = var.region_name,
+    accountid = var.accountid,
+    topicname = var.topicname
+  }
+
+  template = "${file("${path.module}/sns_policy.json")}"
+}
+
+// Create SNS Policy 
+
+resource "aws_iam_policy" "snspolicy" {
+  name   = "sns_policy"
+  policy = "${data.template_file.snspolicytemplate.rendered}"
+
+}
+
+data "template_file" "dynamodbpolicytemplate" {
+  vars = {
+    region    = var.region_name,
+    accountid = var.accountid,
+    tablename = var.dynamodb_table_name
+  }
+  template = "${file("${path.module}/dynamodb_policy.json")}"
+}
+
+data "template_file" "lambdacicduserpolicytemplate" {
+  vars = {
+    region          = var.region_name,
+    accountId       = var.accountid,
+    lambda_function = var.lambdafunction
+  }
+  template = "${file("${path.module}/lambda_codedeploy_policy.json")}"
+}
+
+resource "aws_iam_policy" "lambdacicduserpolicy" {
+  name   = "lambda-cicd-user-policy"
+  policy = "${data.template_file.lambdacicduserpolicytemplate.rendered}"
+}
+
+
+// Create DynamoDB Policy 
+
+resource "aws_iam_policy" "dynamopolicy" {
+  name   = "dynamodb_policy"
+  policy = "${data.template_file.dynamodbpolicytemplate.rendered}"
+}
+
+data "template_file" "sespolicytemplate" {
+
+  vars = {
+    region       = var.region_name,
+    accountid    = var.accountid,
+    identityname = var.route53_zone_name
+  }
+  template = "${file("${path.module}/SES_policy.json")}"
+}
+
+// Create SES Policy 
+
+resource "aws_iam_policy" "sespolicy" {
+  name   = "ses_policy"
+  policy = "${data.template_file.sespolicytemplate.rendered}"
+}
+
+data "template_file" "lambdapolicytemplate" {
+
+  template = "${file("${path.module}/lambda_assume_role_policy.json")}"
+}
+
+// role for lambda function 
+
+resource "aws_iam_role" "iam_for_lambda" {
+  name               = "lambda-role"
+  assume_role_policy = "${data.template_file.lambdapolicytemplate.rendered}"
+}
+
+resource "aws_iam_role_policy_attachment" "attach-dynamodb-policy" {
+  role       = aws_iam_role.iam_for_lambda.name
+  policy_arn = aws_iam_policy.dynamopolicy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "attach-ses-policy" {
+  role       = aws_iam_role.iam_for_lambda.name
+  policy_arn = aws_iam_policy.sespolicy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "attach-lambdacloudwatch-policy" {
+  role       = aws_iam_role.iam_for_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+
+resource "aws_iam_role_policy_attachment" "attach-sns-policy" {
+  role       = aws_iam_role.iamrole.name
+  policy_arn = aws_iam_policy.snspolicy.arn
+}
+
+resource "aws_lambda_function" "lambdafunction" {
+  filename      = "Lambda.zip"
+  function_name = var.lambdafunction
+  role          = aws_iam_role.iam_for_lambda.arn
+  handler       = var.handler
+  memory_size   = var.memorysize
+  timeout       = var.timeout
+  runtime       = var.runtime
+
+  environment {
+    variables = {
+      dynamodbTable = var.dynamodb_table_name
+      identity      = var.route53_zone_name
+    }
+  }
+}
+resource "aws_sns_topic_subscription" "user_updates_sqs_target" {
+  topic_arn = aws_sns_topic.question_updates.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.lambdafunction.arn
+}
+
+
+resource "aws_lambda_permission" "with_sns" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambdafunction.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.question_updates.arn
+}
+
+resource "aws_iam_user_policy_attachment" "lambda_cicd_policy_IAM" {
+  user       = var.lambda_cicd_user
+  policy_arn = aws_iam_policy.lambdacicduserpolicy.arn
+}
+
+resource "aws_iam_user_policy_attachment" "lambda_cicd_S3Policy_IAM" {
+  user       = var.lambda_cicd_user
+  policy_arn = aws_iam_policy.CodeDeploy_EC2S3Policy.arn
 }
