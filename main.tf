@@ -85,8 +85,8 @@ resource "aws_security_group" "sg_loadBalancer" {
   vpc_id = aws_vpc.vpc1.id
 
   ingress {
-    from_port   = var.httpPort // 80
-    to_port     = var.httpPort //80
+    from_port   = var.httpsPort // 443
+    to_port     = var.httpsPort //443
     protocol    = var.protocol
     cidr_blocks = [var.publicroute]
   }
@@ -110,6 +110,14 @@ resource "aws_security_group" "allow_all" {
     to_port         = var.apachePort //8080
     protocol        = var.protocol
     security_groups = [aws_security_group.sg_loadBalancer.id]
+
+  }
+
+  ingress {
+    from_port   = var.sshPort //8080
+    to_port     = var.sshPort //8080
+    protocol    = var.protocol
+    cidr_blocks = [var.allCIDR]
 
   }
 
@@ -168,6 +176,17 @@ resource "aws_db_subnet_group" "default" {
   }
 }
 
+resource "aws_db_parameter_group" "default" {
+  name   = "rds-pg"
+  family = var.paramFamily
+
+  parameter {
+    name         = var.paramName
+    value        = var.paramValue
+    apply_method = var.applyMethod
+  }
+}
+
 resource "aws_db_instance" "mysqlinstance" {
   allocated_storage      = var.db_allocated_storage
   storage_type           = var.db_storage_type
@@ -177,7 +196,7 @@ resource "aws_db_instance" "mysqlinstance" {
   name                   = var.db_name
   username               = var.db_username
   password               = var.db_password
-  parameter_group_name   = var.db_parameter_group_name
+  parameter_group_name   = aws_db_parameter_group.default.id
   skip_final_snapshot    = var.db_skip_final_snapshot
   publicly_accessible    = var.db_publicly_accessible
   vpc_security_group_ids = [aws_security_group.database.id]
@@ -414,11 +433,18 @@ resource "aws_lb" "applicationLoadBalancer" {
     Name = var.loadBalancerName //"applicationLoadBalancer"
   }
 }
+
+
+data "aws_acm_certificate" "issued" {
+  domain   = var.certificateName
+  statuses = ["ISSUED"]
+}
+
 resource "aws_lb_listener" "lb_listener" {
   load_balancer_arn = aws_lb.applicationLoadBalancer.arn
   port              = var.listenerPort     // "80"
   protocol          = var.listenerProtocol // "HTTP"
-
+  certificate_arn   = data.aws_acm_certificate.issued.arn
   default_action {
     type             = var.listenerDefaultActionType //"forward"
     target_group_arn = aws_lb_target_group.application_target_group.arn

@@ -149,8 +149,8 @@ variable "db_username" {
 variable "db_password" {
 }
 
-variable "db_parameter_group_name" {
-}
+//variable "db_parameter_group_name" {
+//}
 
 variable "db_skip_final_snapshot" {
 }
@@ -287,6 +287,7 @@ variable "alarmLowThreshold" {}
 
 variable "apachePort" {}
 variable "httpPort" {}
+variable "httpsPort" {}
 variable "loadBalanceSecurityGroupName" {}
 
 
@@ -313,6 +314,13 @@ variable "memorysize" {}
 variable "timeout" {}
 variable "runtime" {}
 variable "handler" {}
-variable "lambda_cicd_user" {
+variable "lambda_cicd_user" {}
 
-}
+
+variable "certificateName" {}
+variable "paramFamily" {}
+variable "paramName" {}
+variable "paramValue" {}
+variable "applyMethod" {}
+variable "sshPort" {}
+variable "allCIDR" {}
