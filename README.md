@@ -21,7 +21,7 @@ This project will create basic infrastructure to deploy amazon EC2 instance
     aws acm import-certificate --certificate fileb://certificateBody.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem --region us-east-1 --profile prod
 
 
-## Verify RDS is connection is secured 
+## Verify RDS connection is secured 
     mysql> SELECT distinct id, user, host, connection_type 
        FROM performance_schema.threads pst 
        INNER JOIN information_schema.processlist isp 
